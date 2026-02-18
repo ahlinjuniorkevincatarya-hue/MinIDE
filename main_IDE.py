@@ -1,14 +1,22 @@
 from tkinter import *
 from tkinter import font,filedialog, messagebox,ttk
 import os
+import subprocess
 
 #Editeur de texte 
 root = Tk()
 root.title("MinIDE")
 root.geometry("500x400")
 
+#creation du notebook pour permettre l'affichage des onglets
 notebook = ttk.Notebook(root)
 notebook.pack(fill="both", expand=True)
+
+#Creation d'une console pour afficher la sortie du script
+console_frame = Frame(root,height=150)
+console_frame.pack(fill="x")
+console_txt = Text(console_frame,height=8, bg="black", fg="white", state="disabled")
+console_txt.pack(fill="both",expand=True)
 
 
 def newTab():
@@ -99,7 +107,6 @@ def saveAllTabs():
             with open(fd, "w", encoding="utf-8") as f:
                 f.write(t)
 
-
 def copytxt():
     current_tab = notebook.select()
     txt_widget = notebook.nametowidget(current_tab).winfo_children()[0]
@@ -147,11 +154,44 @@ def redotxt():
         messagebox.showinfo("Redo","Nothing to redo.")
 
 def selectalltxt():
+
     current_tab = notebook.select()
     txt_widget = notebook.nametowidget(current_tab).winfo_children()[0]
     txt_widget.tag_add("sel", "1.0", "end")
 
+def runpy():
+    current_tab = notebook.select()
+    txt_widget = notebook.nametowidget(current_tab).winfo_children()[1]  # Text principal
+    code = txt_widget.get("1.0","end-1c")  # "-1c" pour éviter la ligne vide finale
+
+    # Écriture du script temporaire
+    with open("script.py", "w", encoding="utf-8") as f:
+        f.write(code)
     
+    try:
+        # Exécution du script
+        result = subprocess.run(
+            ["python", "script.py"], 
+            capture_output=True,
+            text=True,
+            check=False
+        )
+
+        console_txt.config(state="normal")
+        console_txt.delete("1.0", "end")
+
+        if result.stdout:
+            console_txt.insert("end", "[STDOUT]\n" + result.stdout + "\n")
+        if result.stderr:
+            console_txt.insert("end", "[STDERR]\n" + result.stderr + "\n")
+
+        console_txt.config(state="disabled")
+
+    except FileNotFoundError:
+        messagebox.showerror("Run Error", "Python n'est pas trouvé. Vérifie ton installation.")
+    except Exception as e:
+        messagebox.showerror("Run Error", str(e))
+
     
 
 menubar = Menu(root)
@@ -174,6 +214,10 @@ emenu.add_command(label="Cut", command=cuttxt)
 emenu.add_command(label="Undo", command=undotxt)
 emenu.add_command(label="Redo", command=redotxt)
 emenu.add_command(label="Select All", command=selectalltxt)
+#run menu
+rmenu = Menu(menubar,tearoff = 0)
+rmenu.add_command(label="Run", command=runpy)
+menubar.add_cascade(label="Run",menu=rmenu)
 
 menubar.add_cascade(label="Edit",menu=emenu)
 
