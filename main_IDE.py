@@ -55,12 +55,30 @@ def newTab():
             line_numbers.insert("end", f"{i}\n")
         line_numbers.config(state="disabled")
 
+    def auto_indent(event):
+        current_line = txt.get("insert linestart", "insert")
+        # compter les espaces/tabs au début de la ligne
+        indent = ""
+        for char in current_line:
+            if char in (" ", "\t"):
+                indent += char
+            else:
+                break
+        # augmenter l'indentation si la ligne finit par ":"
+        if current_line.rstrip().endswith(":"):
+            indent += "    "
+        # insérer nouvelle ligne + indentation
+        txt.insert("insert", "\n" + indent)
+        return "break" 
+        
+
     # Bindings pour mettre à jour les numéros
     txt.bind("<KeyRelease>", lambda e: (update_line_numbers(), color_syntax(txt)))
     txt.bind("<MouseWheel>", update_line_numbers)
     txt.bind("<Button-4>", update_line_numbers)  # scroll Linux
     txt.bind("<Button-5>", update_line_numbers)  # scroll Linux
-
+    txt.bind("<Return>", auto_indent)
+    
     # Ajouter onglet au Notebook
     notebook.add(frame, text=f"Tab {len(notebook.tabs())+1}")
     notebook.select(frame)
